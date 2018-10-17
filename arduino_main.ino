@@ -153,22 +153,10 @@ void CAR_direction(){
 		{
 			digitalWrite(WALKING_FORWARD_RELAY, HIGH);
 			digitalWrite(WALKING_BACKWARD_RELAY, HIGH);
-			Serial.println("Direction offline");
+		//	Serial.println("Direction offline");
 		}
 		else{}
 	}
-	else
-	{  Serial.println("===============================================Speed return to zero===============================================");
-		while(Speed>0){
-			Speed-=60;
-			delay(500);
-			Serial.print(Speed,DEC);
-			analogWrite(SpeedKeyin, Speed);  
-		}
-		digitalWrite(WALKING_FORWARD_RELAY, HIGH);
-		digitalWrite(WALKING_BACKWARD_RELAY, HIGH);
-	}
-
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -226,7 +214,11 @@ rpm = V(m/sec) * 6 * 60 ÷ (2 * pi * 0.254 (m))
 0~3000rpm map to 0~5V map to 0~255PWM                     
 PWM = 255 * rpm ÷ 3000                                    
 */
-	wheelRPM = abs(linearV) * 6 * 60 / (2 * 3.141592 * 0.254);
+
+///////////////////////////////////////////////////20181017
+	wheelRPM = abs(linearV) * 1237.7;
+///////////////////////////////////////////////////20181017
+
 	throttlePercent = 100 * wheelRPM / 7000;
 	Speed = 255 * wheelRPM / 7000;
 	Speed = constrain(Speed, 0, 255);//constraining to appropriate value
@@ -267,22 +259,27 @@ void Speedkeyin()
 {
   current_time = millis();
   cross_time = current_time - mark_time;  
-  /*
-  //------------------------------------------------- 20181014
-  if(cross_time>25){
-    mark_time = millis();     // update mart_time
-    if(Speed>Previous_Speed){
-      Previous_Speed++;
-      analogWrite(SpeedKeyin, Previous_Speed);
-    }
-    else if(Speed<Previous_Speed){
-      Previous_Speed--;
-      analogWrite(SpeedKeyin, Previous_Speed);
-    }    
-  }
-  */
-  analogWrite(SpeedKeyin, Speed);
+  
+///////////////////////////////////////////////////20181017
+if(Speed>Previous_Speed && cross_time>20 )
+{ 
+  mark_time = millis();
+  Previous_Speed = Previous_Speed+1;
+
+  analogWrite(SpeedKeyin, Previous_Speed);
 }
+else if(Speed<Previous_Speed && cross_time>20 )
+{ 
+  mark_time = millis();
+  Previous_Speed = Previous_Speed-1;
+
+  analogWrite(SpeedKeyin, Previous_Speed);
+}
+  analogWrite(SpeedKeyin, Previous_Speed);
+///////////////////////////////////////////////////20181017
+
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////
 /*** Arduino start ***/
 void setup() {
@@ -321,7 +318,11 @@ void setup() {
 
 	delay(100);
 	Serial.println("Arduino is starting up!");
-	int count = 50;                                     // the max numbers of initializint the CAN-BUS, if initialize failed first!.  
+	int count = 50;    
+	// the max numbers of initializint the CAN-BUS, if initialize failed first!.  
+
+
+  
 	do {
 		CAN.init();   //must initialize the Can interface here! 
 		if(CAN_OK == CAN.begin(CAN_500KBPS))                   // init can bus : baudrate = 500k
@@ -338,6 +339,8 @@ void setup() {
 	}while(count--);
   
 	attachInterrupt(0, MCP2515_ISR, FALLING); // start interrupt
+
+
 }  
 
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -350,7 +353,7 @@ void loop()
 {
 	start_time = millis();
 	Privious_Direction = Now_Direction;
-  Previous_Speed = Speed;
+
 	// pusher_brake_make_objective();
 	if(flagRecv) 
 	{                                   // check if get data
@@ -373,7 +376,8 @@ void loop()
 		} 
 	} 
 
-  /*
+
+/* 
   if (Serial.available() > 0) 
   {
     User_stop = Serial.read();
@@ -383,6 +387,10 @@ void loop()
     {linearV=2; }
     else if (User_stop=='w')
     {linearV=-2; }
+    else if (User_stop=='z')
+    {linearV=5; }
+    else if (User_stop=='x')
+    {linearV=-5; }
     else if (User_stop=='e')
     {digitalWrite(Left_Turn_light_RELAY,LOW);} 
     else if (User_stop=='r')
@@ -409,8 +417,8 @@ void loop()
       digitalWrite(Front_main_light_RELAY, HIGH);     
       }
   }
+*/
 
-  */
   
   pusher_brake_make_objective();
 	CAR_direction();  
